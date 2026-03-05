@@ -1,0 +1,19 @@
+# Core
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Visualization (optional)
+matplotlib>=3.4.0
+seaborn>=0.11.0
+
+# ML (optional - nếu dùng sklearn)
+scikit-learn>=1.0.0
+
+# AI/ML (optional)
+scipy>=1.7.0
+
+# For notebooks
+ipykernel>=6.0.0
+
+# Testing
+pytest>=7.0.0
