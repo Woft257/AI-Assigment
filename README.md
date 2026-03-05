@@ -2,20 +2,13 @@
 
 ## Thông tin môn học
 - **Môn học:** Introduction to AI
-- **Mã môn học:** CSxxx
+- **Mã môn học:** CO3061
 - **Học kỳ:** II
 - **Năm học:** 2025-2026
 - **Trường:** Đại học Bách Khoa, ĐHQG-HCM
 
 ## Giảng viên hướng dẫn
 - TS. Trương Vĩnh Lân
-
-## Thành viên nhóm
-| Họ tên | Mã số sinh viên | Email |
-|--------|-----------------|-------|
-|        |                 |       |
-|        |                 |       |
-|        |                 |       |
 
 ## Mục tiêu
 Mô hình hóa và giải quyết bài toán thực tế bằng các kỹ thuật AI: tìm kiếm, suy luận tri thức, xác suất Bayes, và học máy.
