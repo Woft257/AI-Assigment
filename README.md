@@ -40,4 +40,4 @@ AI-Assigment/
 ## Link
 - Colab Notebook: [Link]
 - Báo cáo PDF: [Link]
-- GitHub Repository: [Link]
+- GitHub Repository: [[Link](https://github.com/Woft257/AI-Assigment)]
