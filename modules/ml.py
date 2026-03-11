@@ -1,6 +1,6 @@
 """
 ML Module - Phần E
-Class Order và hàm tạo data huấn luyện
+Class Order và hàm đọc data từ Xe dù (data thật)
 """
 
 # ============================================
@@ -10,128 +10,129 @@ class Order:
     """
     Class lưu thông tin đơn hàng cho ML
     """
-    # Input attributes
+    # Input attributes (từ Xe dù)
     order_id: str
-    distance_km: float
-    time_hour: int
-    day_of_week: int
-    building_type: str      # apartment, house, office, mall, school
-    traffic_level: str     # low, medium, high
-    order_priority: str    # low, normal, high, urgent
-    is_weekend: bool
-    is_rush_hour: bool
-    weather: str           # clear, rain, storm, fog
+    distance_km: float          # shippingDistance (m) -> km
+    time_hour: int              # từ createdAt
+    day_of_week: int            # từ createdAt (0=Chủ nhật)
+    traffic_level: str         # từ Traffic HCM (low/medium/high)
+    order_priority: str        # từ serviceType (urgent/normal/low)
+    is_weekend: bool            # từ day_of_week
+    is_rush_hour: bool          # từ time_hour (7-9, 17-19)
+    # weather: KHÔNG có trong Xe dù
 
     # Output attribute
-    eta_label: str         # "fast" hoặc "slow"
+    eta_minutes: float          # Thời gian giao thực tế (phút)
+    eta_label: str              # "fast" (<20p) hoặc "slow" (>=20p)
 
     def __init__(self, order_id, distance_km, time_hour, day_of_week,
-                 building_type, traffic_level, order_priority,
-                 is_weekend, is_rush_hour, weather):
+                 traffic_level, order_priority, is_weekend, is_rush_hour):
         self.order_id = order_id
         self.distance_km = distance_km
         self.time_hour = time_hour
         self.day_of_week = day_of_week
-        self.building_type = building_type
         self.traffic_level = traffic_level
         self.order_priority = order_priority
         self.is_weekend = is_weekend
         self.is_rush_hour = is_rush_hour
-        self.weather = weather
+        self.eta_minutes = None
         self.eta_label = None
 
-    def calculate_eta_label(self):
+    def set_eta(self, eta_minutes: float):
         """
-        Tính toán ETA label dựa trên công thức
+        Set ETA thực tế từ data Xe dù
+        Label: fast < 90p, slow >= 90p
         """
-        # Bước 1: ETA cơ bản
-        eta = 5 + (self.distance_km * 3)
-
-        # Bước 2: Thêm thời gian do giao thông
-        if self.traffic_level == "medium":
-            eta += 5
-        elif self.traffic_level == "high":
-            eta += 10
-
-        # Bước 3: Thêm thời gian do thời tiết
-        if self.weather == "rain":
-            eta += 5
-        elif self.weather == "storm":
-            eta += 10
-        elif self.weather == "fog":
-            eta += 3
-
-        # Bước 4: Thêm thời gian do giờ cao điểm
-        if self.is_rush_hour:
-            eta += 5
-
-        # Bước 5: Thêm thời gian do loại tòa nhà
-        if self.building_type == "apartment":
-            eta += 3
-        elif self.building_type == "mall":
-            eta += 5
-
-        # Bước 6: Điều chỉnh do độ ưu tiên
-        if self.order_priority == "urgent":
-            eta -= 2
-        elif self.order_priority == "low":
-            eta += 2
-
-        # Bước 7: Gán nhãn
-        self.eta_label = "fast" if eta < 20 else "slow"
-        return self.eta_label
+        self.eta_minutes = eta_minutes
+        self.eta_label = "fast" if eta_minutes < 90 else "slow"
 
 
 # ============================================
-# HÀM TẠO DATA TỔNG HỢP
+# HÀM ĐỌC DATA TỪ XE DÙ
 # ============================================
-def generate_ml_data(n_samples=500):
+def load_ml_data_from_uds():
     """
-    Hàm tạo n_samples dữ liệu tổng hợp cho ML
-
-    Args:
-        n_samples: Số lượng mẫu cần tạo (500-1000)
+    Đọc data từ Xe dù (uds-orders-aug2024.csv)
 
     Returns:
-        List of Order objects đã có eta_label
+        List of Order objects
     """
-    import random
-
-    building_types = ["apartment", "house", "office", "mall", "school"]
-    traffic_levels = ["low", "medium", "high"]
-    order_priorities = ["low", "normal", "high", "urgent"]
-    weathers = ["clear", "rain", "storm", "fog"]
+    import csv
+    from datetime import datetime
 
     orders = []
+    filename = "data/uds-orders-aug2024.csv"
 
-    for i in range(n_samples):
-        # Random các giá trị
-        distance = round(random.uniform(0.5, 10.0), 2)
-        hour = random.randint(0, 23)
-        day = random.randint(0, 6)
-        building = random.choice(building_types)
-        traffic = random.choice(traffic_levels)
-        priority = random.choice(order_priorities)
-        weather = random.choice(weathers)
-        is_weekend = day in [0, 6]
-        is_rush_hour = hour in [7, 8, 9, 17, 18, 19]
+    with open(filename, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                # Parse createdAt và deliveredAt
+                created = datetime.fromisoformat(row['createdAt'].replace('Z', '+00:00'))
+                delivered = datetime.fromisoformat(row['deliveredAt'].replace('Z', '+00:00'))
 
-        # Tạo Order
-        order = Order(
-            order_id=f"ORD{i+1:04d}",
-            distance_km=distance,
-            time_hour=hour,
-            day_of_week=day,
-            building_type=building,
-            traffic_level=traffic,
-            order_priority=priority,
-            is_weekend=is_weekend,
-            is_rush_hour=is_rush_hour,
-            weather=weather
-        )
+                # Tính ETA (phút)
+                eta_minutes = (delivered - created).total_seconds() / 60
 
-        # Tính ETA label
-        order.calculate_eta_label()
-        orders.append(order)
+                # Skip nếu ETA quá lớn (>3h = 180p) hoặc âm
+                if eta_minutes <= 0 or eta_minutes > 180:
+                    continue
+
+                # Distance (m -> km)
+                distance_km = float(row['shippingDistance']) / 1000
+
+                # Time features
+                time_hour = created.hour
+                day_of_week = created.weekday()  # 0=Mon, 6=Sun
+                is_weekend = day_of_week in [5, 6]
+                is_rush_hour = time_hour in [7, 8, 9, 17, 18, 19]
+
+                # Traffic level - chưa có, default là "medium"
+                # (sẽ map từ Traffic HCM sau)
+                traffic_level = "medium"
+
+                # Order priority từ serviceType
+                service_type = row.get('serviceType', '5h')
+                if service_type == '3h':
+                    order_priority = "urgent"
+                elif service_type == '5h':
+                    order_priority = "normal"
+                else:
+                    order_priority = "low"
+
+                # Tạo Order
+                order = Order(
+                    order_id=row['id'],
+                    distance_km=distance_km,
+                    time_hour=time_hour,
+                    day_of_week=day_of_week,
+                    traffic_level=traffic_level,
+                    order_priority=order_priority,
+                    is_weekend=is_weekend,
+                    is_rush_hour=is_rush_hour
+                )
+                order.set_eta(eta_minutes)
+                orders.append(order)
+
+            except Exception as e:
+                continue
 
     return orders
+
+
+# ============================================
+# VÍ DỤ
+# ============================================
+if __name__ == "__main__":
+    orders = load_ml_data_from_uds()
+
+    print(f"Total orders loaded: {len(orders)}")
+    print("\nFirst 5 orders:")
+    for o in orders[:5]:
+        print(f"  {o.order_id}: {o.distance_km:.2f}km, {o.eta_minutes:.1f}min, {o.eta_label}")
+
+    # Thống kê
+    fast = sum(1 for o in orders if o.eta_label == "fast")
+    slow = sum(1 for o in orders if o.eta_label == "slow")
+    print(f"\nFast: {fast} ({fast/len(orders)*100:.1f}%)")
+    print(f"Slow: {slow} ({slow/len(orders)*100:.1f}%)")
