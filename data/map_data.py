@@ -9,6 +9,7 @@ from modules.search import Node, Edge, Graph
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_NODES_PATH = os.path.join(CURRENT_DIR, 'nodes.csv')
 DEFAULT_SEGMENTS_PATH = os.path.join(CURRENT_DIR, 'segments.csv')
+DEFAULT_UDS_PATH = os.path.join(CURRENT_DIR, 'uds-orders-aug2024.csv')
 
 def build_map_graph(nodes_path=DEFAULT_NODES_PATH, segments_path=DEFAULT_SEGMENTS_PATH):
     # Khởi tạo đồ thị rỗng
@@ -51,15 +52,47 @@ def build_map_graph(nodes_path=DEFAULT_NODES_PATH, segments_path=DEFAULT_SEGMENT
 if __name__ == "__main__":
    graph = build_map_graph()
 
-print("\n-- Test đồ thị --")
-print(f"Tổng số ngã tư (nodes): {len(graph.adj_list)}")
-print(f"Số ngã tư có đường đi: {sum(1 for edges in graph.adj_list.values() if edges)}")
-print(f"Số ngã tư không có đường đi: {sum(1 for edges in graph.adj_list.values() if not edges)}")
-print(f"Số cạnh (edges) tổng cộng: {sum(len(edges) for edges in graph.adj_list.values())}")
-test_id = '373543511'
-print(f"\nCác đường đi từ node {test_id}:")
-if test_id in graph.adj_list:
-    for edge in graph.adj_list[test_id]:
-        print(f"  -> Đi đến {edge.target_node} (Khoảng cách: {edge.distance} m, Tốc độ tối đa: {edge.max_speed} km/h)")
-else:
-    print(f"  -> Không tìm thấy ngã tư với ID {test_id}")
+print("\n-- Test do thi --")
+print(f"Tong so nga tu (nodes): {len(graph.adj_list)}")
+print(f"So nga tu co duong di: {sum(1 for edges in graph.adj_list.values() if edges)}")
+print(f"So canh (edges) tong cong: {sum(len(edges) for edges in graph.adj_list.values())}")
+
+# ============================================
+# ĐỌC TỌA ĐỘ TỪ XE DÙ
+# ============================================
+def load_uds_coordinates(uds_path=DEFAULT_UDS_PATH):
+    """
+    Đọc tọa độ từ Xe dù (sender và receiver)
+
+    Returns:
+        List of dict với sender_lat, sender_lng, receiver_lat, receiver_lng
+    """
+    import csv
+
+    uds_df = pd.read_csv(uds_path)
+
+    coordinates = []
+    for _, row in uds_df.iterrows():
+        try:
+            sender_lat = float(row['senderLat'])
+            sender_lng = float(row['senderLng'])
+            receiver_lat = float(row['receiverLat'])
+            receiver_lng = float(row['receiverLng'])
+
+            coordinates.append({
+                'sender_lat': sender_lat,
+                'sender_lng': sender_lng,
+                'receiver_lat': receiver_lat,
+                'receiver_lng': receiver_lng
+            })
+        except (ValueError, TypeError):
+            continue
+
+    return coordinates
+
+if __name__ == "__main__":
+    coords = load_uds_coordinates()
+    print(f"\n-- Test toa do Xe du --")
+    print(f"Da doc {len(coords)} toa do")
+    if coords:
+        print(f"Vi du: {coords[0]}")
