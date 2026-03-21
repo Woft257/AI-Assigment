@@ -16,14 +16,18 @@ class Graph:
     def __init__(self):
         # adj_list lưu trữ theo dạng Dict: { "Node_ID": [Edge1, Edge2,...] }
         self.adj_list = {} 
+        self.nodes = {} 
 
-    def add_node(self, node_id: str):
+    def add_node(self, node: Node):
         # TODO: Code thêm node vào đồ thị
-        pass
+        if node.node_id not in self.adj_list:
+            self.adj_list[node.node_id] = []
+            self.nodes[node.node_id] = node
 
     def add_edge(self, from_node: str, edge: Edge):
         # TODO: Code thêm cạnh vào node tương ứng
-        pass
+        if from_node in self.adj_list:
+            self.adj_list[from_node].append(edge)
 
 # ==========================================
 # CÁC HÀM PHỤ TRỢ & THUẬT TOÁN (CHƯA CODE LOGIC)
