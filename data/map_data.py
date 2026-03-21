@@ -55,9 +55,11 @@ print("\n-- Test đồ thị --")
 print(f"Tổng số ngã tư (nodes): {len(graph.adj_list)}")
 print(f"Số ngã tư có đường đi: {sum(1 for edges in graph.adj_list.values() if edges)}")
 print(f"Số ngã tư không có đường đi: {sum(1 for edges in graph.adj_list.values() if not edges)}")
-print("\nVí dụ về một ngã tư và các đường đi từ đó:")
-for node_id, edges in graph.adj_list.items():
-    print(f"Ngã tư {node_id}:")
-    for edge in edges:
+print(f"Số cạnh (edges) tổng cộng: {sum(len(edges) for edges in graph.adj_list.values())}")
+test_id = '373543511'
+print(f"\nCác đường đi từ node {test_id}:")
+if test_id in graph.adj_list:
+    for edge in graph.adj_list[test_id]:
         print(f"  -> Đi đến {edge.target_node} (Khoảng cách: {edge.distance} m, Tốc độ tối đa: {edge.max_speed} km/h)")
-    break  # Chỉ in thông tin của một ngã tư để kiểm tra
+else:
+    print(f"  -> Không tìm thấy ngã tư với ID {test_id}")
