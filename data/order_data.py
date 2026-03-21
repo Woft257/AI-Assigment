@@ -44,6 +44,7 @@ class OrderDataLoader:
                     orders.append({
                         'id': order_id,
                         'weight': weight,
+                        'shipping_distance': float(row['shippingDistance']) if row.get('shippingDistance') else 0.0,
                         'real_time': real_time_minutes
                     })
 
@@ -56,17 +57,18 @@ class OrderDataLoader:
 
             shippers = list(shippers_dict.values())
             
-            print(f"✅ Đã xử lý thành công {len(orders)} đơn hàng và {len(shippers)} shipper.")
+            print(f"[OK] Da xu ly thanh cong {len(orders)} don hang va {len(shippers)} shipper.")
             return orders, shippers
 
         except FileNotFoundError:
-            print(f"❌ Không tìm thấy file tại: {self.file_path}")
+            print(f"[ERROR] Khong tim thay file tai: {self.file_path}")
             return [], []
 
 if __name__ == "__main__":
-    loader = OrderDataLoader('/data/uds-orders-aug2024.csv')
+    loader = OrderDataLoader('data/uds-orders-aug2024.csv')
     my_orders, my_shippers = loader.load_data_for_csp()
-    
-if my_orders:
-    for i in range (len(my_orders) - 2400):
-        print(my_orders[i])
+
+    if my_orders:
+        print(f"\nFirst 5 orders:")
+        for order in my_orders[:5]:
+            print(order)
