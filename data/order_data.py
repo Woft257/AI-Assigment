@@ -6,9 +6,21 @@ class OrderDataLoader:
     def __init__(self, file_path):
         self.file_path = file_path
 
-    def load_data_for_csp(self):
+    def load_data_for_csp(self, max_time_filter=240.0):
+        """
+        Đọc data từ CSV cho bài toán CSP.
+
+        Args:
+            max_time_filter: Lọc bỏ đơn hàng có real_time > giá trị này (phút).
+                             Mặc định 240 phút (4 giờ). Các đơn vượt quá thường là
+                             giao qua đêm hoặc lỗi data, không phù hợp cho CSP.
+        
+        Returns:
+            (orders, shippers): tuple of lists
+        """
         orders = []
         shippers_dict = {}
+        skipped = 0
 
         try:
             with open(self.file_path, mode='r', encoding='utf-8') as file:
@@ -41,6 +53,11 @@ class OrderDataLoader:
                     except (ValueError, TypeError):
                         real_time_minutes = 60.0
 
+                    # Lọc bỏ đơn có thời gian bất hợp lý (quá lâu hoặc âm)
+                    if real_time_minutes <= 0 or real_time_minutes > max_time_filter:
+                        skipped += 1
+                        continue
+
                     orders.append({
                         'id': order_id,
                         'weight': weight,
@@ -57,7 +74,7 @@ class OrderDataLoader:
 
             shippers = list(shippers_dict.values())
             
-            print(f"[OK] Da xu ly thanh cong {len(orders)} don hang va {len(shippers)} shipper.")
+            print(f"[OK] Da xu ly thanh cong {len(orders)} don hang va {len(shippers)} shipper. (Bo qua {skipped} don bat hop ly)")
             return orders, shippers
 
         except FileNotFoundError:

@@ -36,6 +36,7 @@ Hệ thống IF-THEN để xác định thời gian giao hàng tối đa và ph�
 # ----- Rules về priority_level -----
 # Rule 6: IF is_vip = True THEN priority_level = "high"
 # Rule 7: IF delivery_time_requested = "express" THEN priority_level = "urgent"
+# Rule 7b: IF delivery_time_requested = "express" THEN delivery_time_limit = delivery_time_limit * 0.5
 
 # ----- Rules về estimated_surcharge -----
 # Rule 8: IF is_rush_hour = True THEN estimated_surcharge + 10000
@@ -185,6 +186,9 @@ class Order:
             self.priority_level = "high"
         if self.delivery_time_requested == "express":
             self.priority_level = "urgent"
+            # Rule 7b: Express giảm thời gian giao hàng tối đa 50%
+            if self.delivery_time_limit is not None:
+                self.delivery_time_limit = int(self.delivery_time_limit * 0.5)
 
         # Rules 8-14: estimated_surcharge
         if self.is_rush_hour:
