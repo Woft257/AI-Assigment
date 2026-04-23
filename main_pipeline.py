@@ -75,8 +75,15 @@ def run_pipeline():
         
         processed_orders = []
         
+        # --- Thống kê AI cho Lô ---
+        ml_slow_count = 0
+        ml_fast_count = 0
+        rule_total_surcharge = 0
+        rule_urgent_count = 0
+        bayes_avg_penalty = 0.0
+        
         for order in batch_orders:
-            # 1. PHẦN A (Search): Lấy distance và suy ra Road_Type
+            # 1. PHẦN A (Search)
             distance_km = order['weight'] * 1.5
             road_type = "Main" if distance_km > 5.0 else "Alley"
             
@@ -85,12 +92,13 @@ def run_pipeline():
             day_of_week = random.randint(0, 6)
             is_rush_hour = time_hour in [7, 8, 9, 17, 18, 19]
             
-            # 2. PHẦN D (Bayes): Dự đoán giao thông
+            # 2. PHẦN D (Bayes)
             bayes_result = bayes_model.infer_traffic_level(time_slot, road_type)
             traffic_level = bayes_result['prediction']
             traffic_penalty = bayes_result['penalty']
+            bayes_avg_penalty += traffic_penalty
             
-            # 3. PHẦN E (ML): Dự đoán tốc độ giao
+            # 3. PHẦN E (ML)
             eta_pred = "normal"
             if ml_model:
                 traffic_map = {'low': 0, 'medium': 1, 'high': 2}
@@ -104,8 +112,10 @@ def run_pipeline():
                     'is_rush_hour': int(is_rush_hour)
                 }
                 eta_pred = predict_eta(ml_model, ml_features)
+                if eta_pred == "slow": ml_slow_count += 1
+                else: ml_fast_count += 1
                 
-            # 4. PHẦN C (Rules): Tính phụ phí và giới hạn thời gian
+            # 4. PHẦN C (Rules)
             weather_mock = random.choice(["clear", "rain"])
             dist_cat = "long" if distance_km > 10 else "medium" if distance_km > 5 else "short"
             
@@ -121,33 +131,34 @@ def run_pipeline():
                 weather=weather_mock
             )
             rule_result = rule_order.apply_rules()
+            rule_total_surcharge += rule_result['estimated_surcharge']
+            if rule_result['priority_level'] == 'urgent': rule_urgent_count += 1
             
-            # Nhân thời gian thực tế với penalty từ Bayes
+            # Cập nhật thời gian
             order['real_time'] = order['real_time'] * traffic_penalty
             processed_orders.append(order)
             
-        # 5. PHẦN B (CSP): Phân công tối ưu cho Batch hiện tại
-        # Ẩn output chi tiết của CSPSolver bằng cách ghi đè sys.stdout tạm thời không khả thi, ta chấp nhận in ra hoặc CSP im lặng
-        # Ở đây ta sẽ chỉ in report cho batch.
+        bayes_avg_penalty /= len(batch_orders) if batch_orders else 1
+            
+        # 5. PHẦN B (CSP)
         csp_solver = DeliveryCSP(processed_orders, batch_shippers)
-        
-        # Ngăn in màn hình chi tiết bên trong csp_solver bằng cách chuyển output
-        # (Để đơn giản ta không sửa mã bên trong csp_solver, chỉ in tóm tắt ở main)
-        # Tuy nhiên csp_solver.solve() in ra bảng. Thay vì sửa CSP, ta xem kết quả.
         fnull = io.StringIO()
         with contextlib.redirect_stdout(fnull):
             solution = csp_solver.solve()
         
         batch_num = batch_idx + 1
+        print(f"\n[Lô {batch_num}/{len(chunks)}] --- Phân tích AI & Quy tắc ---")
+        print(f"  > [ML & Bayes] Dự đoán: {ml_fast_count} FAST, {ml_slow_count} SLOW | Phạt kẹt xe trung bình: x{bayes_avg_penalty:.2f}")
+        print(f"  > [Rules]      Ưu tiên: {rule_urgent_count} đơn URGENT | Thu thêm phụ phí: {rule_total_surcharge:,} VND")
+        
         if solution:
-            # Tính tổng cost của batch
             batch_cost = solution['cost']
-            print(f"[Batch {batch_num}/{len(chunks)}] ✅ Đã phân công {len(batch_orders)} đơn cho {len(batch_shippers)} Shipper | Chi phí: {batch_cost:.1f} phút")
+            print(f"  > [CSP]        ✅ Tối ưu thành công! Phân công {len(batch_orders)} đơn cho {len(batch_shippers)} Shipper (Tổng TG: {batch_cost:.1f} phút)")
             total_system_cost += batch_cost
             successful_batches += 1
             total_orders_processed += len(batch_orders)
         else:
-            print(f"[Batch {batch_num}/{len(chunks)}] ❌ Vượt quá W_max/T_max. Cần chia nhỏ hơn hoặc thêm Shipper.")
+            print(f"  > [CSP]        ❌ Từ chối phân công: Tổng khối lượng/thời gian vượt ngưỡng vật lý (W_max/T_max) của {len(batch_shippers)} Shipper.")
             failed_batches += 1
 
     print("\n" + "="*60)
