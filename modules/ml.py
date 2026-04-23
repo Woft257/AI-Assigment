@@ -11,6 +11,17 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from modules.traffic_ai import get_trained_bayes, get_time_slot_from_hour
 
+# Import thu vien ML
+try:
+    import pandas as pd
+    from sklearn.model_selection import train_test_split
+    from sklearn.tree import DecisionTreeClassifier, export_text
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+    HAS_ML_LIBS = True
+except ImportError:
+    HAS_ML_LIBS = False
+    print("[WARNING] Thieu thu vien pandas hoac scikit-learn. Chay 'pip install pandas scikit-learn' de train ML.")
+
 # ============================================
 # CLASS ORDER
 # ============================================
@@ -138,18 +149,149 @@ def load_ml_data_from_uds():
 
 
 # ============================================
-# VÍ DỤ
+# HÀM HUẤN LUYỆN VÀ ĐÁNH GIÁ MÔ HÌNH (ML PIPELINE)
+# ============================================
+def prepare_data(orders):
+    """
+    Chuyển list Order thành DataFrame và mã hóa dữ liệu.
+    """
+    if not HAS_ML_LIBS:
+        return None, None
+        
+    data = []
+    for o in orders:
+        if o.eta_label is None:
+            continue
+        data.append({
+            'distance_km': o.distance_km,
+            'time_hour': o.time_hour,
+            'day_of_week': o.day_of_week,
+            'traffic_level': o.traffic_level,
+            'order_priority': o.order_priority,
+            'is_weekend': int(o.is_weekend),
+            'is_rush_hour': int(o.is_rush_hour),
+            'label': 1 if o.eta_label == 'slow' else 0  # 1: slow, 0: fast
+        })
+    
+    df = pd.DataFrame(data)
+    
+    # Mã hóa biến categorical bằng map
+    traffic_map = {'low': 0, 'medium': 1, 'high': 2}
+    priority_map = {'low': 0, 'normal': 1, 'urgent': 2}
+    
+    df['traffic_level'] = df['traffic_level'].map(traffic_map)
+    df['order_priority'] = df['order_priority'].map(priority_map)
+    
+    # Fill NaN nếu có lỗi map
+    df.fillna(0, inplace=True)
+    
+    # Tách features (X) và labels (y)
+    X = df.drop(columns=['label'])
+    y = df['label']
+    
+    return X, y
+
+def train_and_evaluate(X, y):
+    """
+    Huấn luyện Decision Tree và in kết quả đánh giá.
+    """
+    if not HAS_ML_LIBS:
+        return None
+        
+    # Chia train/test 80-20
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    print(f"[*] Đã chia dữ liệu: {len(X_train)} train, {len(X_test)} test")
+    
+    # Khởi tạo và huấn luyện mô hình (max_depth=5 để tránh overfitting)
+    model = DecisionTreeClassifier(max_depth=5, random_state=42)
+    model.fit(X_train, y_train)
+    
+    # Dự đoán trên tập test
+    y_pred = model.predict(X_test)
+    
+    # Đánh giá
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, zero_division=0)
+    rec = recall_score(y_test, y_pred, zero_division=0)
+    f1 = f1_score(y_test, y_pred, zero_division=0)
+    cm = confusion_matrix(y_test, y_pred)
+    
+    print("\n" + "="*50)
+    print("  KẾT QUẢ ĐÁNH GIÁ MÔ HÌNH DECISION TREE")
+    print("="*50)
+    print(f"  Accuracy  : {acc:.4f}")
+    print(f"  Precision : {prec:.4f} (Dự đoán slow đúng / Tổng dự đoán slow)")
+    print(f"  Recall    : {rec:.4f} (Dự đoán slow đúng / Tổng thực tế slow)")
+    print(f"  F1-Score  : {f1:.4f}")
+    print("\n  Confusion Matrix:")
+    print(f"    TN (Đoán Fast đúng): {cm[0][0]:<5} | FP (Đoán Slow sai): {cm[0][1]}")
+    print(f"    FN (Đoán Fast sai) : {cm[1][0]:<5} | TP (Đoán Slow đúng): {cm[1][1]}")
+    print("="*50)
+    
+    # Feature Importance
+    print("\n[*] Mức độ quan trọng của các đặc trưng (Feature Importances):")
+    importances = model.feature_importances_
+    features = X.columns
+    for feat, imp in sorted(zip(features, importances), key=lambda x: x[1], reverse=True):
+        print(f"  - {feat:<15}: {imp:.4f}")
+        
+    # Tùy chọn: In ra một số rules dạng text
+    print("\n[*] Một số quy tắc quan trọng trên Cây Quyết Định:")
+    tree_rules = export_text(model, feature_names=list(features), max_depth=2)
+    print(tree_rules)
+    
+    return model
+
+def predict_eta(model, order_features_dict):
+    """
+    Dự đoán nhãn cho 1 đơn hàng mới.
+    order_features_dict: dictionary chứa các features đã được số hóa.
+    """
+    if not HAS_ML_LIBS or model is None:
+        return "unknown"
+    df = pd.DataFrame([order_features_dict])
+    pred = model.predict(df)[0]
+    return "slow" if pred == 1 else "fast"
+
+# ============================================
+# VÍ DỤ / DEMO RUN
 # ============================================
 if __name__ == "__main__":
+    print("="*50)
+    print("  DEMO: HỌC MÁY (PHẦN E) - DỰ ĐOÁN ETA")
+    print("="*50)
+    
+    # 1. Load data
     orders = load_ml_data_from_uds()
-
-    print(f"Total orders loaded: {len(orders)}")
-    print("\nFirst 5 orders:")
-    for o in orders[:5]:
-        print(f"  {o.order_id}: {o.distance_km:.2f}km, {o.eta_minutes:.1f}min, {o.eta_label}")
-
+    print(f"\n[*] Đã tải {len(orders)} đơn hàng từ Xe dù.")
+    
     # Thống kê
     fast = sum(1 for o in orders if o.eta_label == "fast")
     slow = sum(1 for o in orders if o.eta_label == "slow")
-    print(f"\nFast: {fast} ({fast/len(orders)*100:.1f}%)")
-    print(f"Slow: {slow} ({slow/len(orders)*100:.1f}%)")
+    print(f"    Nhãn Fast (< 90p): {fast} ({fast/len(orders)*100:.1f}%)")
+    print(f"    Nhãn Slow (>= 90p): {slow} ({slow/len(orders)*100:.1f}%)")
+    
+    # 2. Huấn luyện
+    if HAS_ML_LIBS:
+        print("\n[*] Đang chuẩn bị dữ liệu và huấn luyện mô hình...")
+        X, y = prepare_data(orders)
+        if X is not None:
+            model = train_and_evaluate(X, y)
+            
+            # 3. Thử inference 1 đơn mới
+            print("\n[*] Thử suy luận (Inference) 1 đơn hàng mới:")
+            sample_order = {
+                'distance_km': 8.5,
+                'time_hour': 18,
+                'day_of_week': 4,
+                'traffic_level': 2, # high
+                'order_priority': 1, # normal
+                'is_weekend': 0,
+                'is_rush_hour': 1
+            }
+            pred = predict_eta(model, sample_order)
+            print(f"  Đơn hàng: Khoảng cách xa (8.5km), Giờ cao điểm, Kẹt xe (high)")
+            print(f"  => Mô hình dự đoán: {pred.upper()}")
+    else:
+        print("\n[!] Không thể huấn luyện mô hình vì thiếu thư viện.")
