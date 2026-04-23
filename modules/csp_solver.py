@@ -176,6 +176,10 @@ class DeliveryCSP:
         5. Đệ quy hoặc Backtrack
         """
         self.nodes_explored += 1
+        
+        # Thêm giới hạn số nodes để tránh treo máy trên các batch quá khó/vô nghiệm
+        if self.nodes_explored > 10000:
+            return
 
         # Base case: tất cả đơn đã được gán
         if not unassigned:
