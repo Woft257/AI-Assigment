@@ -1,7 +1,15 @@
 """
-ML Module - Phần E
-Class Order và hàm đọc data từ Xe dù (data thật)
+ML Module - Phan E
+Class Order va ham doc data tu Xe du (data that)
+Tich hop voi Bayes Network (Phan D) de suy luan traffic_level
 """
+
+import os
+import sys
+
+# Them path de import modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from modules.traffic_ai import get_trained_bayes, get_time_slot_from_hour
 
 # ============================================
 # CLASS ORDER
@@ -87,9 +95,18 @@ def load_ml_data_from_uds():
                 is_weekend = day_of_week in [5, 6]
                 is_rush_hour = time_hour in [7, 8, 9, 17, 18, 19]
 
-                # Traffic level - chưa có, default là "medium"
-                # (sẽ map từ Traffic HCM sau)
-                traffic_level = "medium"
+                # Traffic level - suy luan tu Bayes Network (Phan D)
+                time_slot = get_time_slot_from_hour(time_hour)
+                try:
+                    bayes = get_trained_bayes()
+                    bayes_result = bayes.infer_traffic_level(time_slot, "Main")
+                    probs = bayes_result['probabilities']
+                    import random
+                    levels = list(probs.keys())
+                    weights = list(probs.values())
+                    traffic_level = random.choices(levels, weights=weights, k=1)[0].lower()
+                except Exception:
+                    traffic_level = "medium"  # Fallback
 
                 # Order priority từ serviceType
                 service_type = row.get('serviceType', '5h')

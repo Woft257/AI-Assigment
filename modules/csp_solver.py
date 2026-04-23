@@ -467,7 +467,6 @@ if __name__ == "__main__":
         all_orders, all_shippers = loader.load_data_for_csp()
 
         if all_orders and all_shippers:
-            # Lấy 1 batch nhỏ để test
             batch_orders = all_orders[:20]
             batch_shippers = all_shippers[:5]
 
@@ -476,4 +475,43 @@ if __name__ == "__main__":
             if result2:
                 csp2.print_solution(result2)
     else:
-        print(f"  [SKIP] Không tìm thấy file data: {data_path}")
+        print(f"  [SKIP] Khong tim thay file data: {data_path}")
+
+    # --- Test 3: Tich hop Bayes -> CSP ---
+    print("\n\n>>> TEST 3: Tich hop Bayes -> CSP (he so phat giao thong)")
+    from modules.traffic_ai import get_trained_bayes, apply_traffic_penalty, get_time_slot_from_hour
+
+    train_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'train.csv')
+
+    if os.path.exists(data_path) and os.path.exists(train_path):
+        # Buoc 1: Train Bayes tu data giao thong
+        bayes = get_trained_bayes(train_path)
+
+        # Buoc 2: Suy luan traffic_level cho gio cao diem
+        result_peak = bayes.infer_traffic_level("Peak", "Main")
+        traffic_level = result_peak['prediction']
+        penalty = result_peak['penalty']
+        print(f"  Bayes suy luan: Traffic = {traffic_level} (penalty x{penalty})")
+
+        # Buoc 3: Ap dung he so phat vao don hang
+        loader = OrderDataLoader(data_path)
+        all_orders, all_shippers = loader.load_data_for_csp()
+
+        if all_orders and all_shippers:
+            batch_orders = all_orders[:15]
+            batch_shippers = all_shippers[:5]
+
+            # Ap dung traffic penalty
+            adjusted_orders = apply_traffic_penalty(batch_orders, traffic_level)
+
+            print(f"  Vi du dieu chinh thoi gian:")
+            for i in range(min(3, len(adjusted_orders))):
+                orig = batch_orders[i]['real_time']
+                adj = adjusted_orders[i]['real_time']
+                print(f"    {adjusted_orders[i]['id']}: {orig:.1f}min -> {adj:.1f}min (x{penalty})")
+
+            # Buoc 4: Giai CSP voi thoi gian da dieu chinh
+            csp3 = DeliveryCSP(adjusted_orders, batch_shippers)
+            result3 = csp3.solve()
+            if result3:
+                csp3.print_solution(result3)
