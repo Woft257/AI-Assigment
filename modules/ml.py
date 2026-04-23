@@ -17,6 +17,7 @@ try:
     from sklearn.model_selection import train_test_split
     from sklearn.tree import DecisionTreeClassifier, export_text
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+    import joblib
     HAS_ML_LIBS = True
 except ImportError:
     HAS_ML_LIBS = False
@@ -240,6 +241,17 @@ def train_and_evaluate(X, y):
     print("\n[*] Một số quy tắc quan trọng trên Cây Quyết Định:")
     tree_rules = export_text(model, feature_names=list(features), max_depth=2)
     print(tree_rules)
+    
+    # LƯU MÔ HÌNH VÀO THƯ MỤC features/ (Yêu cầu nộp bài)
+    features_dir = os.path.join(os.path.dirname(__file__), '..', 'features')
+    if not os.path.exists(features_dir):
+        os.makedirs(features_dir)
+    model_path = os.path.join(features_dir, 'decision_tree_model.pkl')
+    try:
+        joblib.dump(model, model_path)
+        print(f"\n[OK] Đã lưu mô hình Decision Tree vào: {model_path}")
+    except Exception as e:
+        print(f"\n[WARNING] Lỗi khi lưu mô hình: {e}")
     
     return model
 
