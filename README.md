@@ -72,7 +72,7 @@ AI-Assigment/
 │   └── decision_tree_model.pkl # Model Decision Tree đã được train và lưu lại
 │
 ├── reports/                    # Chứa báo cáo PDF giải thích chi tiết thực nghiệm
-│   └── (File PDF Báo cáo sẽ đặt tại đây)
+│   └── report-nhom-7.pdf       # Báo cáo chi tiết của nhóm
 │
 ├── data/                       # Chứa bộ dữ liệu gốc (không đưa lên cloud ngoài)
 │   ├── uds-orders-aug2024.csv  # Dữ liệu 1500+ đơn hàng thật của Xe dù (Tháng 8/2024)
@@ -85,4 +85,4 @@ AI-Assigment/
 
 ## 🔗 7. Links đính kèm
 - **Google Colab Notebook:** [Click để mở Notebook trên Colab](https://colab.research.google.com/github/Woft257/AI-Assigment/blob/main/notebooks/AI_Delivery_System.ipynb)
-- **Báo cáo PDF:** [Nằm trong thư mục reports/] *(Nhóm sẽ cập nhật link Drive phụ nếu cần)*
+- **Báo cáo PDF:** [report-nhom-7.pdf](./reports/report-nhom-7.pdf)

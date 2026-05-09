@@ -31,6 +31,8 @@ wheels/
 *.h5
 *.pkl
 
+# Ngoại lệ giữ lại file model đã train
+!features/decision_tree_model.pkl
 # IDE
 .vscode/
 .idea/
