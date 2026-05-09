@@ -113,18 +113,18 @@ class TrafficBayesNetwork:
         """
         Map LOS (Level of Service) tu train.csv sang Traffic_Level.
 
-        A, B: Low (thong thoang)
-        C, D: Medium (binh thuong)
-        E, F: High (ket xe)
+        A: Low (thong thoang)
+        B, C: Medium (binh thuong)
+        D, E, F: High (ket xe)
 
         Args:
             los: str, vd "A", "B", "C", "D", "E", "F"
         Returns:
             "Low", "Medium", hoac "High"
         """
-        if los in ('A', 'B'):
+        if los == 'A':
             return "Low"
-        elif los in ('C', 'D'):
+        elif los in ('B', 'C'):
             return "Medium"
         else:
             return "High"
