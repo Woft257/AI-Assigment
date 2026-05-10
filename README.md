@@ -85,4 +85,4 @@ AI-Assigment/
 
 ## 🔗 7. Links đính kèm
 - **Google Colab Notebook:** [Click để mở Notebook trên Colab](https://colab.research.google.com/github/Woft257/AI-Assigment/blob/main/notebooks/AI_Delivery_System.ipynb)
-- **Báo cáo PDF:** [report-nhom-7.pdf](./reports/report-nhom-7.pdf) (hoặc xem qua [Google Drive](https://drive.google.com/file/d/1cMepEwOS13zr8XVKCflT3LsjPBs6-aG9/view?usp=drive_link))
+- **Báo cáo PDF:** [report-nhom-7.pdf](./reports/report-nhom-7.pdf) (hoặc xem qua <a href="https://drive.google.com/file/d/1cMepEwOS13zr8XVKCflT3LsjPBs6-aG9/view?usp=drive_link" target="_blank">Google Drive</a>)
